@@ -2,7 +2,6 @@ import { useSignalState } from './useSignalState';
 import { useAntidelayManager } from './useAntidelayManager';
 import { useSaveTsManager } from './useSaveTsManager';
 import { Capacitor } from '@capacitor/core';
-import { App } from '@capacitor/app';
 import BroadcastPlugin from '../plugins/BroadcastPlugin';
 
 export const useSignalTracker = () => {
@@ -67,7 +66,7 @@ export const useSignalTracker = () => {
       return false;
     }
 
-    // Method 1: Try using custom Capacitor BroadcastPlugin
+    // Use custom Capacitor BroadcastPlugin
     try {
       console.log(`${buttonName} Attempting to send broadcast via Capacitor BroadcastPlugin`);
       const result = await BroadcastPlugin.sendBroadcast({ action: intentAction });
@@ -79,40 +78,7 @@ export const useSignalTracker = () => {
       console.log(`${buttonName} ❌ BroadcastPlugin method failed:`, pluginError);
     }
 
-    // Method 2: Try using Capacitor App plugin to open external app
-    try {
-      console.log(`${buttonName} Attempting to send broadcast via Capacitor App plugin`);
-      const urlScheme = `intent://${intentAction}#Intent;scheme=broadcast;end`;
-      await App.openUrl({ url: urlScheme });
-      console.log(`${buttonName} ✅ Broadcast intent sent via App plugin: ${intentAction}`);
-      return true;
-    } catch (appError) {
-      console.log(`${buttonName} ❌ App plugin method failed:`, appError);
-    }
-
-    // Method 3: Try using direct intent URL scheme
-    try {
-      console.log(`${buttonName} Attempting to send broadcast via intent URL scheme`);
-      const intentUrl = `intent://broadcast/${intentAction}#Intent;scheme=broadcast;action=${intentAction};end`;
-      window.location.href = intentUrl;
-      console.log(`${buttonName} ✅ Broadcast intent sent via intent URL: ${intentAction}`);
-      return true;
-    } catch (intentError) {
-      console.log(`${buttonName} ❌ Intent URL method failed:`, intentError);
-    }
-
-    // Method 4: Fallback to Tasker-specific URL scheme
-    try {
-      console.log(`${buttonName} Attempting Tasker-specific URL scheme`);
-      const taskerUrl = intentAction.replace('com.tasker.', 'tasker://').toLowerCase();
-      window.location.href = taskerUrl;
-      console.log(`${buttonName} ✅ Tasker URL scheme sent: ${taskerUrl}`);
-      return true;
-    } catch (taskerError) {
-      console.log(`${buttonName} ❌ Tasker URL scheme failed:`, taskerError);
-    }
-
-    console.log(`${buttonName} ⚠️ All broadcast methods failed. Configure Tasker manually to listen for: ${intentAction}`);
+    console.log(`${buttonName} ⚠️ Broadcast method failed. Configure Tasker manually to listen for: ${intentAction}`);
     return false;
   };
 
