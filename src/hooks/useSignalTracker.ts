@@ -2,6 +2,8 @@
 import { useSignalState } from './useSignalState';
 import { useAntidelayManager } from './useAntidelayManager';
 import { useSaveTsManager } from './useSaveTsManager';
+import { Capacitor } from '@capacitor/core';
+import BroadcastPlugin from '../plugins/BroadcastPlugin';
 
 export const useSignalTracker = () => {
   const {
@@ -58,83 +60,29 @@ export const useSignalTracker = () => {
         console.log(`${buttonName} Platform detected: ${platform}`);
         
         if (platform === 'android') {
-          // Use Capacitor's native Android functionality to send broadcast intent
-          const { Capacitor } = (window as any);
-          
-          // Method 1: Try using Capacitor's native bridge to send intent
-          if (Capacitor.Plugins && Capacitor.Plugins.Device) {
-            console.log(`${buttonName} Attempting to send broadcast via Capacitor native bridge`);
-            
-            // Create a custom intent using Capacitor's native bridge
-            try {
-              await Capacitor.Plugins.Device.sendIntent({
-                action: intentAction,
-                type: 'broadcast'
-              });
-              console.log(`${buttonName} ✅ Broadcast intent sent successfully via native bridge: ${intentAction}`);
-              return true;
-            } catch (bridgeError) {
-              console.log(`${buttonName} ❌ Native bridge method failed:`, bridgeError);
-            }
-          }
-
-          // Method 2: Fallback to using Android WebView interface
           try {
-            if ((window as any).Android && (window as any).Android.sendBroadcast) {
-              console.log(`${buttonName} Attempting to send broadcast via Android WebView interface`);
-              (window as any).Android.sendBroadcast(intentAction);
-              console.log(`${buttonName} ✅ Broadcast intent sent successfully via WebView interface: ${intentAction}`);
-              return true;
-            }
-          } catch (webViewError) {
-            console.log(`${buttonName} ❌ WebView interface method failed:`, webViewError);
-          }
-
-          // Method 3: Use eval to execute native Android code
-          try {
-            console.log(`${buttonName} Attempting to send broadcast via eval method`);
-            const androidCode = `
-              try {
-                var intent = new android.content.Intent();
-                intent.setAction("${intentAction}");
-                var context = com.getcapacitor.BridgeActivity.this || activity;
-                context.sendBroadcast(intent);
-                console.log("${buttonName} ✅ Broadcast sent via eval: ${intentAction}");
-              } catch (e) {
-                console.log("${buttonName} ❌ Eval method failed: " + e.toString());
-              }
-            `;
-            eval(androidCode);
-            return true;
-          } catch (evalError) {
-            console.log(`${buttonName} ❌ Eval method failed:`, evalError);
-          }
-
-          // Method 4: Try using Capacitor's CapacitorHttp or similar plugins
-          try {
-            console.log(`${buttonName} Attempting to trigger intent via local HTTP call`);
-            // This is a fallback that could work if we had a local service
-            const response = await fetch(`http://localhost:8080/broadcast?action=${encodeURIComponent(intentAction)}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: intentAction })
+            console.log(`${buttonName} Using BroadcastPlugin to send broadcast intent`);
+            const result = await BroadcastPlugin.sendBroadcast({
+              action: intentAction
             });
-            if (response.ok) {
-              console.log(`${buttonName} ✅ Broadcast sent via local HTTP service: ${intentAction}`);
+            
+            if (result.success) {
+              console.log(`${buttonName} ✅ Broadcast intent sent successfully: ${intentAction}`);
               return true;
+            } else {
+              console.log(`${buttonName} ❌ BroadcastPlugin failed to send intent`);
+              throw new Error('Plugin failed to send broadcast');
             }
-          } catch (httpError) {
-            console.log(`${buttonName} ❌ Local HTTP method failed:`, httpError);
+          } catch (pluginError) {
+            console.log(`${buttonName} ❌ BroadcastPlugin failed:`, pluginError);
+            
+            // Fallback to URL scheme
+            console.log(`${buttonName} Falling back to URL scheme method`);
+            const urlScheme = intentAction.replace('com.tasker.', 'tasker://').toLowerCase();
+            window.location.href = urlScheme;
+            console.log(`${buttonName} 📱 URL scheme sent as fallback: ${urlScheme}`);
+            return false;
           }
-
-          // Method 5: Final fallback - URL scheme (existing method)
-          console.log(`${buttonName} Falling back to URL scheme method`);
-          const urlScheme = intentAction.replace('com.tasker.', 'tasker://').toLowerCase();
-          window.location.href = urlScheme;
-          console.log(`${buttonName} 📱 URL scheme sent as fallback: ${urlScheme}`);
-          
-          console.log(`${buttonName} ⚠️ All native broadcast methods failed. Configure Tasker manually to listen for: ${intentAction}`);
-          return false;
         } else {
           console.log(`${buttonName} ❌ Not on Android platform, cannot send broadcast intent`);
           return false;
