@@ -34,16 +34,8 @@ const config: CapacitorConfig = {
       permissions: {
         external: 'read-write'
       }
-    },
-    BroadcastPlugin: {
-      permissions: ['android.permission.BROADCAST_STICKY']
     }
   },
-  android: {
-    permissions: [
-      'android.permission.BROADCAST_STICKY'
-    ]
-  }
 };
 
 export default config;
